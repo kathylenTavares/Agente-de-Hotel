@@ -4,9 +4,17 @@ from flask_cors import CORS
 from agno.models.openai import OpenAIChat
 from agno.agent import Agent
 from dotenv import load_dotenv
+from supabase import create_client
+import os
 
-#Leitura da chabe de API
+#Leitura da chave de API
 load_dotenv()
+#USANDO GETENV PARA PEGAR O ARQUIVO ESPECÍFICO
+supabase_url = os.getenv("SUPABASE_URL")
+#USANDO GETENV PARA PEGAR O ARQUIVO ESPECÍFICO
+supabase_key = os.getenv("SUPABASE_KEY")
+#Criando a conexão com o banco de dados, passando a URL e a KEY
+supabase = create_client(supabase_url,supabase_key)
 #Criar o nosso app
 app = Flask (__name__)
 #Habilitar o cors
@@ -15,34 +23,20 @@ CORS(app)
 #Criar o agente
 agente = Agent (
     model=OpenAIChat(id="gpt-4o-mini"),
-    description=# PERSONA E CONTEXTO
-"Você é o assistente virtual oficial do Hotel Emiliano"
-"Seu slogan institucional é: "Onde até a insônia encontra o seu repouso."
-"Sua comunicação deve ser clara, prestativa, profissional e levemente humorada (alinhada ao tom do slogan), garantindo uma experiência de atendimento acolhedora e fluida para o usuário da página web"
-"Forneça informações precisas sobre quartos, serviços inclusos, políticas de reservas e preços."
-"Caso o usuário pergunte sobre algo fora do escopo do hotel, responda cordialmente que não possui essa informação e retorne o foco para a estadia."    
-  ## Categorias de Quartos:
-"Quarto Standard**: $500 por diária."
-"Quarto Deluxe**: $700 por diária."
-"Quarto Suíte Presencial**: $1000 por diária."
-
-    ## Serviços e Comodidades Oferecidos:
-"Academia equipada"
-"Café da manhã incluso"
-"Serviço de lavanderia"
-"Restaurante internacional"
-"Piscina climatizada"
-
-    # REGRAS DE FORMATAÇÃO DA RESPOSTA
-"Utilize formatação Markdown rica (tabelas, listas em tópicos e negritos) para tornar a leitura escaneável e agradável na interface web."
-"Nunca exiba caracteres de controle, tags internas ou formatações brutas de código no texto final enviado ao usuário."
-"Mantenha parágrafos curtos e objetivos.",
+    description="Você é um agente virtual do Hotel Travesseiro Nervoso, slogan: Aqui até a insônia dorme"
+    "Você responde de forma clara e humorada, informações sobre quartos,serviços, reservas e preços"
+    "Quarto Standard ($500), Quarto Deluxe ($700), Quarto Suíte Presidencial ($1000)"
+    "Serviços oferecidos: Academia, Café da Manhã, Lavanderia, Restaurante, Piscina"
+    "Não inclua icones em markdown nas respostas, como: ##, **",
+   
     markdown=True
 )
+
 #Criar a rota VAZIA e o método GET
 @app.route("/", methods=['GET'])
 def testar():
     return jsonify({"mensagem":"API funcionando"})
+
 #Criar a rota e o método POST
 @app.route("/chat",methods=['POST'])
 def pergunta():
@@ -50,7 +44,18 @@ def pergunta():
     pergunta = dados['pergunta']
     resposta = agente.run(pergunta)
     return jsonify({"resposta":resposta.content})
-
+#Crir a rota para reservas 
+@app.route("/reservar", methods=['POST'])
+def reservar():
+    dados = request.get_json()
+    nova_reserva = {
+        "nome":dados["nome"],
+        "email":dados["email"],
+        "check_in":dados["check_in"],
+        "tipo_quarto":dados["tipo_quarto"]
+    }
+    supabase.table("reservas").insert(nova_reserva).execute()
+    return jsonify({"mensagem":"Reserva realizada com sucesso!"})
 #Rodar o nosso app
 if __name__ == '__main__':
     app.run(host="0.0.0.0",port=8000)
